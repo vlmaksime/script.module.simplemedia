@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<addon id="script.module.simplemedia" version="1.0.0" name="SimpleMedia" provider-name="vl.maksime">
+    <requires>
+        <import addon="xbmc.python" version="2.19.0"/>
+        <import addon="script.module.simpleplugin3"/>
+    </requires>
+    <extension point="xbmc.python.module" library="libs" />
+    <extension point="xbmc.addon.metadata">
+        <platform>all</platform>
+        <license>GNU GENERAL PUBLIC LICENSE. Version 3, 29 June 2007</license>
+        <forum></forum>
+        <email>vl.maksime@gmail.com</email>
+        <source>https://github.com/vlmaksime/script.module.simplemedia</source>
+        <news></news>
+    </extension>
+</addon>

@@ -220,6 +220,8 @@ class Helper(object):
 
         return re.sub('<[^<]+?>', '', result)
 
+    def get_image(self, image):
+        return image if xbmc.skinHasImage(image) else self.icon
         
 class Plugin(simpleplugin.Plugin, MediaProvider, Helper):
     pass

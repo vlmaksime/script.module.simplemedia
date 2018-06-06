@@ -222,7 +222,16 @@ class Helper(object):
 
     def get_image(self, image):
         return image if xbmc.skinHasImage(image) else self.icon
-        
+
+    def notify_error(self, err):
+        self.log_error(err)
+        try:
+            message = self.gettext(err)
+        except:
+            message = py2_decode(err)
+    
+        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_ERROR)
+
 class Plugin(simpleplugin.Plugin, MediaProvider, Helper):
     pass
 

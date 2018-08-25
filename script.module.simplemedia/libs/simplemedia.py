@@ -239,6 +239,10 @@ class Helper(object):
     
         xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_ERROR)
 
+    def set_settings(self, settings):
+        for id_, val in iteritems(settings):
+            self.set_setting(id_, val)
+    
 class Plugin(simpleplugin.Plugin, MediaProvider, Helper):
     pass
 

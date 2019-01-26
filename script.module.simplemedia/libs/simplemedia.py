@@ -242,6 +242,15 @@ class Helper(object):
     def set_settings(self, settings):
         for id_, val in iteritems(settings):
             self.set_setting(id_, val)
+
+    @classmethod
+    def kodi_major_version(cls):
+        return cls.kodi_version().split('.')[0]
+
+    @staticmethod
+    def kodi_version():
+        return xbmc.getInfoLabel('System.BuildVersion').split(' ')[0]
+
     
 class Plugin(simpleplugin.Plugin, MediaProvider, Helper):
     pass

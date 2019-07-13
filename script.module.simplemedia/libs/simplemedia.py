@@ -13,6 +13,641 @@ import simpleplugin
 
 from simpleplugin import SimplePluginError, py2_decode, py2_encode
 
+__all__ = ['SimplePluginError', 'Plugin', 'RoutedPlugin', 'py2_encode', 'py2_decode',
+           'GeneralInfo', 'VideoInfo', 'ListItemInfo']
+
+class GeneralInfo(object):
+    
+    @property
+    def count(self):
+        """
+        integer (12) - can be used to store an id for later, or for sorting purposes
+
+        :rtype: integer
+        """
+        
+        pass
+         
+    def size(self):
+        """
+        long (1024) - size in bytes
+
+        :rtype: long
+        """
+        
+        pass
+     
+    def date(self):
+        """
+        string (d.m.Y / 01.01.2009) - file date
+
+        :rtype: string
+        """
+        
+        pass
+                
+    def get_info(self):
+        return self._get_info(GeneralInfo)
+
+    def _get_info(self, cls, result=None):
+        result = result or {}
+        
+        for atr_name in dir(cls):
+            atr_info = cls.__dict__.get(atr_name)
+            if atr_info is not None \
+              and isinstance(atr_info, property):
+                atr_value = getattr(self, atr_name)
+                if atr_value is not None:
+                    result[atr_name] = atr_value
+        
+        return result
+    
+class VideoInfo(GeneralInfo):
+
+    @property
+    def genre(self):
+        """
+        string (Comedy) or list of strings (["Comedy", "Animation", "Drama"])
+
+        :rtype: string or list of strings
+        """
+        
+        pass
+
+    @property
+    def country(self):
+        """
+        string (Germany) or list of strings (["Germany", "Italy", "France"])
+
+        :rtype: string or list of strings
+        """
+        
+        pass
+
+    @property
+    def year(self):
+        """
+        integer (2009)
+
+        :rtype: integer
+        """
+        
+        pass
+
+    @property
+    def episode(self):
+        """
+        integer (4)
+
+        :rtype: integer
+        """
+        
+        pass
+
+    @property
+    def season(self):
+        """
+        integer (1)
+
+        :rtype: integer
+        """
+        
+        pass
+
+    @property
+    def sortepisode(self):
+        """
+        integer (4)
+
+        :rtype: integer
+        """
+        
+        return self.episode
+
+    @property
+    def sortseason(self):
+        """
+        integer (1)
+
+        :rtype: integer
+        """
+        
+        return self.season
+
+    @property
+    def episodeguide(self):
+        """
+        string (Episode guide)
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def showlink(self):
+        """
+        string (Battlestar Galactica) or list of strings (["Battlestar Galactica", "Caprica"])
+
+        :rtype: string or list of strings
+        """
+        
+        pass
+
+    @property
+    def top250(self):
+        """
+        integer (192)
+
+        :rtype: integer
+        """
+        
+        pass
+
+    @property
+    def setid(self):
+        """
+        integer (14)
+
+        :rtype: integer
+        """
+        
+        pass
+
+    @property
+    def tracknumber(self):
+        """
+        integer (3)
+
+        :rtype: integer
+        """
+        
+        pass
+
+    @property
+    def rating(self):
+        """
+        float (6.4) - range is 0..10
+
+        :rtype: float
+        """
+        
+        pass
+
+    @property
+    def userrating(self):
+        """
+        integer (9) - range is 1..10 (0 to reset)
+
+        :rtype: integer
+        """
+        
+        pass
+
+    @property
+    def playcount(self):
+        """
+        integer (2) - number of times this item has been played
+
+        :rtype: integer
+        """
+        
+        pass
+
+    @property
+    def overlay(self):
+        """
+        integer (2) - range is 0..7. See Overlay icon types for values
+
+        :rtype: integer
+        """
+        
+        pass
+
+    @property
+    def cast(self):
+        """
+        list (["Michal C. Hall","Jennifer Carpenter"]) - if provided a list of tuples cast will be interpreted as castandrole
+
+        :rtype: list
+        """
+        
+        pass
+
+    @property
+    def castandrole(self):
+        """
+        list of tuples ([("Michael C. Hall","Dexter"),("Jennifer Carpenter","Debra")])
+
+        :rtype: list
+        """
+        
+        pass
+        
+    @property
+    def director(self):
+        """
+        string (Dagur Kari) or list of strings (["Dagur Kari", "Quentin Tarantino", "Chrstopher Nolan"])
+
+        :rtype: string or list of strings
+        """
+        
+        pass
+    
+    @property
+    def mpaa(self):
+        """
+        string (PG-13)
+        
+        :rtype: string
+        """
+        
+        pass
+    
+    @property
+    def plot(self):
+        """
+        string (Long Description)
+        
+        :rtype: string
+        """
+        
+        pass
+    
+    @property
+    def plotoutline(self):
+        """
+        string (Short Description)
+        
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def title(self):
+        """
+        string (Big Fan)
+        
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def originaltitle(self):
+        """
+        string (Big Fan)
+        
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def sorttitle(self):
+        """
+        string (Big Fan)
+        
+        :rtype: string
+        """
+        
+        return self.title
+
+    @property
+    def duration(self):
+        """
+        integer (245) - duration in seconds
+
+        :rtype: integer
+        """
+        
+        pass
+
+    @property
+    def studio(self):
+        """
+        string (Warner Bros.) or list of strings (["Warner Bros.", "Disney", "Paramount"])
+
+        :rtype: string or list of strings
+        """
+        
+        pass
+
+    @property
+    def tagline(self):
+        """
+        string (An awesome movie) - short description of movie
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def writer(self):
+        """
+        string (Robert D. Siegel) or list of strings (["Robert D. Siegel", "Jonathan Nolan", "J.K. Rowling"])
+
+        :rtype: string or list of strings
+        """
+        
+        pass
+
+    @property
+    def tvshowtitle(self):
+        """
+        string (Heroes)
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def premiered(self):
+        """
+        string (2005-03-04)
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def status(self):
+        """
+        string (Continuing) - status of a TVshow
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def set(self):
+        """
+        string (Batman Collection) - name of the collection
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def setoverview(self):
+        """
+        string (All Batman movies) - overview of the collection
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def tag(self):
+        """
+        string (cult) or list of strings (["cult", "documentary", "best movies"]) - movie tag
+
+        :rtype: string or list of strings
+        """
+        
+        pass
+
+    @property
+    def imdbnumber(self):
+        """
+        string (tt0110293) - IMDb code
+
+        :rtype: string
+        """
+        
+        pass
+    
+    @property
+    def code(self):
+        """
+        string (101) - Production code
+
+        :rtype: string
+        """
+        
+        pass
+    
+    @property
+    def aired(self):
+        """
+        string (2008-12-07)
+
+        :rtype: string
+        """
+        
+        pass
+    
+    @property
+    def credits(self):
+        """
+        string (Andy Kaufman) or list of strings (["Dagur Kari", "Quentin Tarantino", "Chrstopher Nolan"]) - writing credits
+
+        :rtype: string or list of strings
+        """
+        
+        pass
+
+    @property
+    def lastplayed(self):
+        """
+        string (Y-m-d h:m:s = 2009-04-05 23:16:04)
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def album(self):
+        """
+        string (The Joshua Tree)
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def artist(self):
+        """
+        list (['U2'])
+
+        :rtype: list
+        """
+        
+        pass
+
+    @property
+    def votes(self):
+        """
+        string (12345 votes)
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def path(self):
+        """
+        string (/home/user/movie.avi)
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def trailer(self):
+        """
+        string (/home/user/trailer.avi)
+
+        :rtype: string
+        """
+        
+        pass
+
+    @property
+    def dateadded(self):
+        """
+        string (Y-m-d h:m:s = 2009-04-05 23:16:04)
+
+        :rtype: string
+        """
+        
+        pass
+     
+    @property
+    def mediatype(self):
+        """
+        string - "video", "movie", "tvshow", "season", "episode" or "musicvideo"
+
+        :rtype: string
+        """
+        
+        pass
+     
+    @property
+    def dbid(self):
+        """
+        integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
+
+        :rtype: integer
+        """
+        
+        pass    
+
+    def get_info(self):
+        video_info = self._get_info(VideoInfo)
+        return self._get_info(GeneralInfo, video_info)
+
+class ListItemInfo(object):
+
+    @property
+    def label(self):
+        pass
+
+    @property
+    def label2(self):
+        pass
+
+    @property
+    def path(self):
+        pass
+
+    @property
+    def offscreen(self):
+        pass
+
+    @property
+    def is_folder(self):
+        pass
+
+    @property
+    def is_playable(self):
+        pass
+
+    @property
+    def art(self):
+        pass
+
+    @property
+    def thumb(self):
+        pass
+
+    @property
+    def icon(self):
+        pass
+
+    @property
+    def fanart(self):
+        pass
+
+    @property
+    def content_lookup(self):
+        return False
+
+    @property
+    def stream_info(self):
+        pass
+
+    @property
+    def info(self):
+        pass
+    
+    @property
+    def context_menu(self):
+        pass
+       
+    @property
+    def subtitles(self):
+        pass
+
+    @property
+    def mime(self):
+        pass
+
+    @property
+    def properties(self):
+        pass
+
+    @property
+    def cast(self):
+        pass
+
+    @property
+    def online_db_ids(self):
+        pass
+
+    @property
+    def ratings(self):
+        pass
+
+    @property
+    def url(self):
+        pass
+    
+    def get_item(self):
+        result = {}
+        
+        cls = ListItemInfo
+        for atr_name in dir(cls):
+            atr_info = cls.__dict__.get(atr_name)
+            if atr_info is not None \
+              and isinstance(atr_info, property):
+                atr_value = getattr(self, atr_name)
+                if atr_value is not None:
+                    result[atr_name] = atr_value
+        
+        return result
+
 class MediaProvider(object):
 
     def __init__(self):
@@ -32,17 +667,34 @@ class MediaProvider(object):
                                          path=item.get('path', ''))
 
         if major_version < '18':
-            if item.get('info') \
-              and item['info'].get('video'):
-                for fields in ['genre', 'writer', 'director', 'country', 'credits']:
-                    if item['info']['video'].get(fields) \
-                      and isinstance(item['info']['video'][fields], list):
-                        item['info']['video'][fields] = ' / '.join(item['info']['video'][fields])
+            if item.get('info') is not None\
+              and item['info'].get('video') is not None:
+                for field in ['genre', 'writer', 'director', 'country', 'credits']:
+                    field_value = item['info']['video'].get(field)
+                    if field_value is not None \
+                      and isinstance(field_value, list):
+                        item['info']['video'][field] = ' / '.join(field_value)
+
+        if major_version < '17':
+            if item.get('info') is not None \
+              and item['info'].get('video') is not None:
+                rating = item['info']['video'].get('rating')
+                ratings = item.get('ratings')
+                if ratings is not None \
+                  and rating is None:
+                    for rating_item in ratings:
+                        if rating_item['defaultt']:
+                            item['info']['video']['rating'] = rating_item['rating']
+                            if rating_item['votes']:
+                                item['info']['video']['votes'] = rating_item['votes']
+                            break
+
         if major_version < '15':
-            if item.get('info') \
-              and item['info'].get('video'):
-                if item['info']['video'].get('duration'):
-                    item['info']['video']['duration'] = (item['info']['video']['duration'] / 60)
+            if item.get('info') is not None\
+              and item['info'].get('video') is not None:
+                duration = item['info']['video'].get('duration')
+                if duration is not None:
+                    item['info']['video']['duration'] = duration / 60
 
         if major_version >= '16':
             art = item.get('art', {})
@@ -57,6 +709,7 @@ class MediaProvider(object):
             list_item.setThumbnailImage(item.get('thumb', ''))
             list_item.setIconImage(item.get('icon', ''))
             list_item.setProperty('fanart_image', item.get('fanart', ''))
+
         if item.get('art'):
             list_item.setArt(item['art'])
         if item.get('stream_info'):
@@ -74,6 +727,7 @@ class MediaProvider(object):
         if item.get('properties'):
             for key, value in iteritems(item['properties']):
                 list_item.setProperty(key, value)
+
         if major_version >= '17':
             cast = item.get('cast')
             if cast is not None:
@@ -122,6 +776,63 @@ class MediaProvider(object):
     def resolve_url(self, item, succeeded=True):
         list_item = self.create_list_item(item)
         xbmcplugin.setResolvedUrl(self._handle, succeeded, list_item)
+
+class SearchProvider(object):
+
+    def search_history_items(self):
+    
+        sm = simpleplugin.Addon('script.module.simplemedia')
+        _ = sm.initialize_gettext()
+
+        search_icon = self.get_image('DefaultAddonsSearch.png')
+
+        listitem = {'label': _('New Search...'),
+                        'url': self.url_for('search'),
+                        'icon': search_icon,
+                        'fanart': self.fanart,
+                        'is_folder': False,
+                        'is_playable': False,
+                        'content_lookup': False,
+                        }
+        yield listitem
+
+        with self.get_storage('__history__.pcl') as storage:
+            history = storage.get('history', [])
+
+            history_length = self.get_setting('history_length')
+            if len(history) > history_length:
+                history[history_length - len(history):] = []
+
+            for item in history:
+                if isinstance(item, dict):
+                    keyword = py2_encode(item['keyword']) # backward compatibility
+                else:
+                    keyword = item
+    
+                listitem = {'label': keyword,
+                            'url': self.url_for('search', keyword=keyword),
+                            'icon': search_icon,
+                            'fanart': self.fanart,
+                            'content_lookup': False,
+                            }
+                yield listitem
+
+    def update_search_history(self, keyword):
+
+        with self.get_storage('__history__.pcl') as storage:
+            history = storage.get('history', [])
+            
+            if keyword in history:
+                history.remove(keyword)
+
+            history.insert(0, keyword)
+
+            history_length = self.get_setting('history_length')
+            if len(history) > history_length:
+                history[history_length - len(history):] = []
+
+            storage['history'] = history
+
 
 class Helper(object):
 
@@ -222,6 +933,7 @@ class Helper(object):
         result = result.replace(u'&bdquo;',     u'„')
         result = result.replace(u'&laquo;',     u'«')
         result = result.replace(u'&raquo;',     u'»')
+        result = result.replace(u'&#39;',       u'\'')
 
         # result = result.replace(u'<br>',    u'\n')
 
@@ -241,7 +953,8 @@ class Helper(object):
 
     def set_settings(self, settings):
         for id_, val in iteritems(settings):
-            self.set_setting(id_, val)
+            if self.get_setting(id_) != val:
+                self.set_setting(id_, val)
 
     @classmethod
     def kodi_major_version(cls):
@@ -251,9 +964,17 @@ class Helper(object):
     def kodi_version():
         return xbmc.getInfoLabel('System.BuildVersion').split(' ')[0]
 
+    @staticmethod
+    def get_keyboard_text(line='', heading='', hidden=False):
+        kbd = xbmc.Keyboard(line, heading, hidden)
+        kbd.doModal()
+        if kbd.isConfirmed():
+            return kbd.getText()
+        
+        return ''  
     
-class Plugin(simpleplugin.Plugin, MediaProvider, Helper):
+class Plugin(simpleplugin.Plugin, MediaProvider, Helper, SearchProvider):
     pass
 
-class RoutedPlugin(simpleplugin.RoutedPlugin, MediaProvider, Helper):
+class RoutedPlugin(simpleplugin.RoutedPlugin, MediaProvider, Helper, SearchProvider):
     pass

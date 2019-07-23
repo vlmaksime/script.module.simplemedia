@@ -634,6 +634,10 @@ class ListItemInfo(object):
     def url(self):
         pass
     
+    @property
+    def season(self):
+        pass
+    
     def get_item(self):
         result = {}
         
@@ -739,6 +743,12 @@ class MediaProvider(object):
             if ratings is not None:
                 for rating in ratings:
                     list_item.setRating(**rating)
+
+        if major_version >= '18':
+            season = item.get('season')
+            if season is not None:
+                list_item.addSeason(**season)
+
         return list_item
 
     def create_directory(self, items, content='files', succeeded=True, update_listing=False, category=None, sort_methods=None, cache_to_disk=False, total_items=0):

@@ -13,3 +13,27 @@ msgstr ""
 msgctxt "#30001"
 msgid "New Search..."
 msgstr ""
+
+# Context menu
+
+msgctxt "#30051"
+msgid "Remove from 'Search'"
+msgstr ""
+
+msgctxt "#30053"
+msgid "Clear 'Search'"
+msgstr ""
+
+# Messages & Labels
+
+msgctxt "#30101"
+msgid "Connection error"
+msgstr ""
+
+msgctxt "#30102"
+msgid "Successfully removed from 'Search'"
+msgstr ""
+
+msgctxt "#30103"
+msgid "'Search' successfully cleared"
+msgstr ""

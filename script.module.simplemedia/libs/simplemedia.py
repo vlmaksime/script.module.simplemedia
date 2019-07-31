@@ -2,8 +2,16 @@
 # License: GPL v.3 https://www.gnu.org/copyleft/gpl.html
 
 from __future__ import unicode_literals
-from future.utils import iteritems
+from future.utils import PY3, iteritems
+
 import re
+import os
+import requests
+from cgitb import text
+if PY3:
+    import http.cookiejar as cookielib
+else:
+    import cookielib
 
 import xbmc
 import xbmcgui
@@ -14,7 +22,130 @@ import simpleplugin
 from simpleplugin import SimplePluginError, py2_decode, py2_encode
 
 __all__ = ['SimplePluginError', 'Plugin', 'RoutedPlugin', 'py2_encode', 'py2_decode',
-           'GeneralInfo', 'VideoInfo', 'ListItemInfo']
+           'GeneralInfo', 'VideoInfo', 'ListItemInfo', 'WebClient', 'WebClientError']
+
+
+class WebClientError(Exception):
+
+    def __init__(self, error):
+
+        self.message = str(error.message)
+        super(WebClientError, self).__init__(self.message)
+
+class WebClient(requests.Session):
+
+    _secret_data = ['password']
+
+    def __init__(self, headers=None, cookie_file=None):
+        super(WebClient, self).__init__()
+
+        if cookie_file is not None:
+            self.cookies = cookielib.LWPCookieJar(cookie_file)
+            if os.path.exists(cookie_file):
+                self.cookies.load(ignore_discard=True, ignore_expires=True)
+
+        if headers is not None:
+            self.headers.update(headers)
+            
+        self._addon = simpleplugin.Addon()
+
+    def __save_cookies(self):
+        if isinstance(self.cookies, cookielib.LWPCookieJar) \
+           and self.cookies.filename:
+            self.cookies.save(ignore_expires=True, ignore_discard=True)
+
+    def post(self, url, **kwargs):
+
+        try:
+            r = super(WebClient, self).post(url, **kwargs)
+            r.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as e:
+            self.log_error(e)
+            raise WebClientError(e)
+        else:
+            self.log_debug(r)
+            if r.headers.get('set-cookie') is not None:
+                self.__save_cookies()
+            return r
+
+    def get(self, url, **kwargs):
+
+        try:
+            r = super(WebClient, self).get(url, **kwargs)
+            r.raise_for_status()
+        except (requests.HTTPError, requests.ConnectionError) as e:
+            self.log_error(e)
+            raise WebClientError(e)
+        else:
+            self.log_debug(r)
+            if r.headers.get('set-cookie') is not None:
+                self.__save_cookies()
+            return r
+
+    def log_debug(self, response):
+        debug_info = []
+
+        request = getattr(response, 'request', None)
+
+        if request is not None:
+            request_info = self.get_request_info(request)
+            if request:
+                debug_info.append(request_info)
+            
+        if response is not None:
+            response_info = self.get_response_info(response)
+            if response_info:
+                debug_info.append(response_info)
+
+        self._addon.log_debug('\n'.join(debug_info)) 
+
+    def log_error(self, error):
+        error_info = [str(error)]
+
+        response = getattr(error, 'response', None)
+        request = getattr(error, 'request', None)
+
+        if request is not None:
+            request_info = self.get_request_info(request)
+            if request:
+                error_info.append(request_info)
+
+        if response is not None:
+            response_info = self.get_response_info(response)
+            if response_info:
+                error_info.append(response_info)
+            
+        self._addon.log_error('\n'.join(error_info)) 
+
+    @staticmethod
+    def get_response_info(response):
+        response_info = ['Response info', 'Status code: {0}'.format(response.status_code), 'Reason: {0}'.format(response.reason)]
+        if response.url:
+            response_info.append('URL: {0}'.format(response.url))
+        if response.headers:
+            response_info.append('Headers: {0}'.format(response.headers))
+        if response.text:
+            response_info.append('Content: {0}'.format(response.text))
+
+        return '\n'.join(response_info)
+
+    @classmethod
+    def get_request_info(cls, request):
+        request_info = ['Request info', 'Method: {0}'.format(request.method)]
+
+        if request.url:
+            request_info.append('URL: {0}'.format(request.url))
+        if request.headers:
+            request_info.append('Headers: {0}'.format(request.headers))
+        if request.body:
+            data = request.body
+            for param in data.split('&'):
+                field, value = param.split('=')
+                if field in cls._secret_data:
+                    data = data.replace(param, '{0}=<SECRET>'.format(field))
+            request_info.append('Data: {0}'.format(data))
+        
+        return '\n'.join(request_info)
 
 class GeneralInfo(object):
     
@@ -792,11 +923,11 @@ class SearchProvider(object):
     def search_history_items(self):
     
         sm = simpleplugin.Addon('script.module.simplemedia')
-        _ = sm.initialize_gettext()
+        sm.initialize_gettext()
 
         search_icon = self.get_image('DefaultAddonsSearch.png')
 
-        listitem = {'label': _('New Search...'),
+        listitem = {'label': sm.gettext('New Search...'),
                         'url': self.url_for('search'),
                         'icon': search_icon,
                         'fanart': self.fanart,
@@ -813,16 +944,21 @@ class SearchProvider(object):
             if len(history) > history_length:
                 history[history_length - len(history):] = []
 
-            for item in history:
+            clear_item = (sm.gettext('Clear \'Search\''), 'RunPlugin({0})'.format(self.url_for('search_clear')))
+
+            for index, item in enumerate(history):
                 if isinstance(item, dict):
                     keyword = py2_encode(item['keyword']) # backward compatibility
                 else:
                     keyword = item
     
+                remove_item = (sm.gettext('Remove from \'Search\''), 'RunPlugin({0})'.format(self.url_for('search_remove', index=index)))
+
                 listitem = {'label': keyword,
                             'url': self.url_for('search', keyword=keyword),
                             'icon': search_icon,
                             'fanart': self.fanart,
+                            'context_menu': [remove_item, clear_item],
                             'content_lookup': False,
                             }
                 yield listitem
@@ -843,6 +979,31 @@ class SearchProvider(object):
 
             storage['history'] = history
 
+    def search_history_remove(self, index):
+
+        sm = simpleplugin.Addon('script.module.simplemedia')
+        sm.initialize_gettext()
+
+        with self.get_storage('__history__.pcl') as storage:
+            history = storage.get('history', [])
+            
+            del history[index]
+
+            storage['history'] = history
+
+        self.dialog_notification_info(sm.gettext('Successfully removed from \'Search\''))
+        xbmc.executebuiltin('Container.Refresh()')
+
+    def search_history_clear(self):
+        
+        sm = simpleplugin.Addon('script.module.simplemedia')
+        sm.initialize_gettext()
+
+        with self.get_storage('__history__.pcl') as storage:
+            storage['history'] = []
+
+        self.dialog_notification_info(sm.gettext('\'Search\' successfully cleared'))
+        xbmc.executebuiltin('Container.Refresh()')
 
 class Helper(object):
 
@@ -852,114 +1013,28 @@ class Helper(object):
             return text
 
         result = text
-        result = result.replace(u'&nbsp;',      u' ')
-        result = result.replace(u'&pound;',     u'£')
-        result = result.replace(u'&euro;',      u'€')
-        result = result.replace(u'&para;',      u'¶')
-        result = result.replace(u'&sect;',      u'§')
-        result = result.replace(u'&copy;',      u'©')
-        result = result.replace(u'&reg;',       u'®')
-        result = result.replace(u'&trade;',     u'™')
-        result = result.replace(u'&deg;',       u'°')
-        result = result.replace(u'&plusmn;',    u'±')
-        result = result.replace(u'&frac14;',    u'¼')
-        result = result.replace(u'&frac12;',    u'½')
-        result = result.replace(u'&frac34;',    u'¾')
-        result = result.replace(u'&times;',     u'×')
-        result = result.replace(u'&divide;',    u'÷')
-        result = result.replace(u'&fnof;',      u'ƒ')
-        result = result.replace(u'&Alpha;',     u'Α')
-        result = result.replace(u'&Beta;',      u'Β')
-        result = result.replace(u'&Gamma;',     u'Γ')
-        result = result.replace(u'&Delta;',     u'Δ')
-        result = result.replace(u'&Epsilon;',   u'Ε')
-        result = result.replace(u'&Zeta;',      u'Ζ')
-        result = result.replace(u'&Eta;',       u'Η')
-        result = result.replace(u'&Theta;',     u'Θ')
-        result = result.replace(u'&Iota;',      u'Ι')
-        result = result.replace(u'&Kappa;',     u'Κ')
-        result = result.replace(u'&Lambda;',    u'Λ')
-        result = result.replace(u'&Mu;',        u'Μ')
-        result = result.replace(u'&Nu;',        u'Ν')
-        result = result.replace(u'&Xi;',        u'Ξ')
-        result = result.replace(u'&Omicron;',   u'Ο')
-        result = result.replace(u'&Pi;',        u'Π')
-        result = result.replace(u'&Rho;',       u'Ρ')
-        result = result.replace(u'&Sigma;',     u'Σ')
-        result = result.replace(u'&Tau;',       u'Τ')
-        result = result.replace(u'&Upsilon;',   u'Υ')
-        result = result.replace(u'&Phi;',       u'Φ')
-        result = result.replace(u'&Chi;',       u'Χ')
-        result = result.replace(u'&Psi;',       u'Ψ')
-        result = result.replace(u'&Omega;',     u'Ω')
-        result = result.replace(u'&alpha;',     u'α')
-        result = result.replace(u'&beta;',      u'β')
-        result = result.replace(u'&gamma;',     u'γ')
-        result = result.replace(u'&delta;',     u'δ')
-        result = result.replace(u'&epsilon;',   u'ε')
-        result = result.replace(u'&zeta;',      u'ζ')
-        result = result.replace(u'&eta;',       u'η')
-        result = result.replace(u'&theta;',     u'θ')
-        result = result.replace(u'&iota;',      u'ι')
-        result = result.replace(u'&kappa;',     u'κ')
-        result = result.replace(u'&lambda;',    u'λ')
-        result = result.replace(u'&mu;',        u'μ')
-        result = result.replace(u'&nu;',        u'ν')
-        result = result.replace(u'&xi;',        u'ξ')
-        result = result.replace(u'&omicron;',   u'ο')
-        result = result.replace(u'&pi;',        u'π')
-        result = result.replace(u'&rho;',       u'ρ')
-        result = result.replace(u'&sigmaf;',    u'ς')
-        result = result.replace(u'&sigma;',     u'σ')
-        result = result.replace(u'&tau;',       u'τ')
-        result = result.replace(u'&upsilon;',   u'υ')
-        result = result.replace(u'&phi;',       u'φ')
-        result = result.replace(u'&chi;',       u'χ')
-        result = result.replace(u'&psi;',       u'ψ')
-        result = result.replace(u'&omega;',     u'ω')
-        result = result.replace(u'&larr;',      u'←')
-        result = result.replace(u'&uarr;',      u'↑')
-        result = result.replace(u'&rarr;',      u'→')
-        result = result.replace(u'&darr;',      u'↓')
-        result = result.replace(u'&harr;',      u'↔')
-        result = result.replace(u'&spades;',    u'♠')
-        result = result.replace(u'&clubs;',     u'♣')
-        result = result.replace(u'&hearts;',    u'♥')
-        result = result.replace(u'&diams;',     u'♦')
-        result = result.replace(u'&quot;',      u'"')
-        result = result.replace(u'&amp;',       u'&')
-        result = result.replace(u'&lt;',        u'<')
-        result = result.replace(u'&gt;',        u'>')
-        result = result.replace(u'&hellip;',    u'…')
-        result = result.replace(u'&prime;',     u'′')
-        result = result.replace(u'&Prime;',     u'″')
-        result = result.replace(u'&ndash;',     u'–')
-        result = result.replace(u'&mdash;',     u'—')
-        result = result.replace(u'&lsquo;',     u'‘')
-        result = result.replace(u'&rsquo;',     u'’')
-        result = result.replace(u'&sbquo;',     u'‚')
-        result = result.replace(u'&ldquo;',     u'“')
-        result = result.replace(u'&rdquo;',     u'”')
-        result = result.replace(u'&bdquo;',     u'„')
-        result = result.replace(u'&laquo;',     u'«')
-        result = result.replace(u'&raquo;',     u'»')
-        result = result.replace(u'&#39;',       u'\'')
-
-        # result = result.replace(u'<br>',    u'\n')
+        result = result.replace('&quot;',   '\u0022')
+        result = result.replace('&amp;',    '\u0026')
+        result = result.replace('&#39;',    '\u0027')
+        result = result.replace('&lt;',     '\u003C')
+        result = result.replace('&gt;',     '\u003E')
+        result = result.replace('&nbsp;',   '\u00A0')
+        result = result.replace('&laquo;',  '\u00AB')
+        result = result.replace('&raquo;',  '\u00BB')
+        result = result.replace('&ndash;',  '\u2013')
+        result = result.replace('&mdash;',  '\u2014')
+        result = result.replace('&lsquo;',  '\u2018')
+        result = result.replace('&rsquo;',  '\u2019')
+        result = result.replace('&sbquo;',  '\u201A')
+        result = result.replace('&ldquo;',  '\u201C')
+        result = result.replace('&rdquo;',  '\u201D')
+        result = result.replace('&bdquo;',  '\u201E')
+        result = result.replace('&hellip;', '\u22EF')
 
         return re.sub('<[^<]+?>', '', result)
 
     def get_image(self, image):
         return image if xbmc.skinHasImage(image) else self.icon
-
-    def notify_error(self, err):
-        self.log_error(err)
-        try:
-            message = self.gettext(err)
-        except:
-            message = py2_decode(err)
-    
-        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_ERROR)
 
     def set_settings(self, settings):
         for id_, val in iteritems(settings):
@@ -982,9 +1057,38 @@ class Helper(object):
             return kbd.getText()
         
         return ''  
+
+class Dialogs(object):
+
+    def notify_error(self, error, show_dialog=False):
+        if isinstance(error, WebClientError):
+            sm = simpleplugin.Addon('script.module.simplemedia')
+            sm.initialize_gettext()
+            
+            message = sm.gettext('Connection error')
+        elif isinstance(error, Exception):
+            message = error.message
+            self.log_error(message)
     
-class Plugin(simpleplugin.Plugin, MediaProvider, Helper, SearchProvider):
+        if show_dialog:
+            self.dialog_ok(message)
+        else:
+            self.dialog_notification_error(message)
+
+    def dialog_notification_error(self, message):
+        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_ERROR)
+
+    def dialog_notification_info(self, message):
+        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_INFO)
+
+    def dialog_notification_warning(self, message):
+        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_WARNING)
+
+    def dialog_ok(self, line1, line2="", line3=""):
+        xbmcgui.Dialog().ok(self.name, line1, line2, line3)
+  
+class Plugin(simpleplugin.Plugin, MediaProvider, Helper, SearchProvider, Dialogs):
     pass
 
-class RoutedPlugin(simpleplugin.RoutedPlugin, MediaProvider, Helper, SearchProvider):
+class RoutedPlugin(simpleplugin.RoutedPlugin, MediaProvider, Helper, SearchProvider, Dialogs):
     pass

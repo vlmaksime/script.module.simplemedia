@@ -10,6 +10,7 @@ import requests
 from cgitb import text
 if PY3:
     import http.cookiejar as cookielib
+    basestring = str
 else:
     import cookielib
 
@@ -1066,8 +1067,13 @@ class Dialogs(object):
             sm.initialize_gettext()
             
             message = sm.gettext('Connection error')
-        elif isinstance(error, Exception):
-            message = error.message
+        else:
+            if isinstance(error, Exception):
+                message = error.message
+            elif isinstance(error, basestring):
+                message = error
+            else:
+                message = str(error)
             self.log_error(message)
     
         if show_dialog:

@@ -30,7 +30,7 @@ class WebClientError(Exception):
 
     def __init__(self, error):
 
-        self.message = str(error.message)
+        self.message = error
         super(WebClientError, self).__init__(self.message)
 
 class WebClient(requests.Session):
@@ -784,14 +784,102 @@ class ListItemInfo(object):
         
         return result
 
-class MediaProvider(object):
-
-    def __init__(self):
-        self._handle = -1
+class Helper():
 
     @staticmethod
-    def create_list_item(item):
-        major_version = xbmc.getInfoLabel('System.BuildVersion')[:2]
+    def remove_html(text):
+        if not text:
+            return text
+
+        result = text
+        result = result.replace('&quot;',   '\u0022')
+        result = result.replace('&amp;',    '\u0026')
+        result = result.replace('&#39;',    '\u0027')
+        result = result.replace('&lt;',     '\u003C')
+        result = result.replace('&gt;',     '\u003E')
+        result = result.replace('&nbsp;',   '\u00A0')
+        result = result.replace('&laquo;',  '\u00AB')
+        result = result.replace('&raquo;',  '\u00BB')
+        result = result.replace('&ndash;',  '\u2013')
+        result = result.replace('&mdash;',  '\u2014')
+        result = result.replace('&lsquo;',  '\u2018')
+        result = result.replace('&rsquo;',  '\u2019')
+        result = result.replace('&sbquo;',  '\u201A')
+        result = result.replace('&ldquo;',  '\u201C')
+        result = result.replace('&rdquo;',  '\u201D')
+        result = result.replace('&bdquo;',  '\u201E')
+        result = result.replace('&hellip;', '\u22EF')
+
+        return re.sub('<[^<]+?>', '', result)
+
+    @classmethod
+    def kodi_major_version(cls):
+        return cls.kodi_version().split('.')[0]
+
+    @staticmethod
+    def kodi_version():
+        return xbmc.getInfoLabel('System.BuildVersion').split(' ')[0]
+
+    @staticmethod
+    def get_keyboard_text(line='', heading='', hidden=False):
+        kbd = xbmc.Keyboard(line, heading, hidden)
+        kbd.doModal()
+        if kbd.isConfirmed():
+            return kbd.getText()
+        
+        return ''  
+
+class Dialogs():
+
+    def notify_error(self, error, show_dialog=False):
+        if isinstance(error, WebClientError):
+            message = self._sm.gettext('Connection error')
+        else:
+            if isinstance(error, Exception):
+                message = error.message
+            elif isinstance(error, basestring):
+                message = error
+            else:
+                message = str(error)
+            self.log_error(message)
+    
+        if show_dialog:
+            self.dialog_ok(message)
+        else:
+            self.dialog_notification_error(message)
+
+    def dialog_notification_error(self, message):
+        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_ERROR)
+
+    def dialog_notification_info(self, message):
+        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_INFO)
+
+    def dialog_notification_warning(self, message):
+        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_WARNING)
+
+    def dialog_ok(self, line1, line2="", line3=""):
+        xbmcgui.Dialog().ok(self.name, line1, line2, line3)
+
+class Addon(simpleplugin.Addon, Helper, Dialogs):
+
+    def __init__(self, id_=''):
+        super(Addon, self).__init__(id_)
+
+        self._sm = simpleplugin.Addon('script.module.simplemedia')
+        self._sm.initialize_gettext()
+
+    def get_image(self, image):
+        return image if xbmc.skinHasImage(image) else self.icon
+
+    def set_settings(self, settings):
+        for id_, val in iteritems(settings):
+            if self.get_setting(id_) != val:
+                self.set_setting(id_, val)
+
+class MediaProvider(Addon):
+
+    def create_list_item(self, item):
+        major_version = self.kodi_major_version()
         if major_version >= '18':
             list_item = xbmcgui.ListItem(label=item.get('label', ''),
                                          label2=item.get('label2', ''),
@@ -919,19 +1007,17 @@ class MediaProvider(object):
         list_item = self.create_list_item(item)
         xbmcplugin.setResolvedUrl(self._handle, succeeded, list_item)
 
-class SearchProvider(object):
+class SearchProvider(Addon):
 
     def search_history_items(self):
     
-        sm = simpleplugin.Addon('script.module.simplemedia')
-        sm.initialize_gettext()
-
         search_icon = self.get_image('DefaultAddonsSearch.png')
 
-        listitem = {'label': sm.gettext('New Search...'),
+        listitem = {'label': self._sm.gettext('New Search...'),
                         'url': self.url_for('search'),
                         'icon': search_icon,
                         'fanart': self.fanart,
+                        'properties': {'SpecialSort': 'top'},
                         'is_folder': False,
                         'is_playable': False,
                         'content_lookup': False,
@@ -945,7 +1031,7 @@ class SearchProvider(object):
             if len(history) > history_length:
                 history[history_length - len(history):] = []
 
-            clear_item = (sm.gettext('Clear \'Search\''), 'RunPlugin({0})'.format(self.url_for('search_clear')))
+            clear_item = (self._sm.gettext('Clear \'Search\''), 'RunPlugin({0})'.format(self.url_for('search_clear')))
 
             for index, item in enumerate(history):
                 if isinstance(item, dict):
@@ -953,7 +1039,7 @@ class SearchProvider(object):
                 else:
                     keyword = item
     
-                remove_item = (sm.gettext('Remove from \'Search\''), 'RunPlugin({0})'.format(self.url_for('search_remove', index=index)))
+                remove_item = (self._sm.gettext('Remove from \'Search\''), 'RunPlugin({0})'.format(self.url_for('search_remove', index=index)))
 
                 listitem = {'label': keyword,
                             'url': self.url_for('search', keyword=keyword),
@@ -969,8 +1055,22 @@ class SearchProvider(object):
         with self.get_storage('__history__.pcl') as storage:
             history = storage.get('history', [])
             
-            if keyword in history:
-                history.remove(keyword)
+            keyword = py2_decode(keyword)
+            
+            i = 0
+            keyword_lower = keyword.lower()
+            while i < len(history):
+                item = history[i]
+                if isinstance(item, dict):
+                    item_keyword = item['keyword'] # backward compatibility
+                else:
+                    item_keyword = item
+                item_keyword = py2_decode(item_keyword).lower()
+
+                if item_keyword == keyword_lower:
+                    del history[i]
+                else:
+                    i += 1
 
             history.insert(0, keyword)
 
@@ -982,9 +1082,6 @@ class SearchProvider(object):
 
     def search_history_remove(self, index):
 
-        sm = simpleplugin.Addon('script.module.simplemedia')
-        sm.initialize_gettext()
-
         with self.get_storage('__history__.pcl') as storage:
             history = storage.get('history', [])
             
@@ -992,109 +1089,23 @@ class SearchProvider(object):
 
             storage['history'] = history
 
-        self.dialog_notification_info(sm.gettext('Successfully removed from \'Search\''))
+        self.dialog_notification_info(self._sm.gettext('Successfully removed from \'Search\''))
         xbmc.executebuiltin('Container.Refresh()')
 
     def search_history_clear(self):
-        
-        sm = simpleplugin.Addon('script.module.simplemedia')
-        sm.initialize_gettext()
 
         with self.get_storage('__history__.pcl') as storage:
             storage['history'] = []
 
-        self.dialog_notification_info(sm.gettext('\'Search\' successfully cleared'))
+        self.dialog_notification_info(self._sm.gettext('\'Search\' successfully cleared'))
         xbmc.executebuiltin('Container.Refresh()')
-
-class Helper(object):
-
-    @staticmethod
-    def remove_html(text):
-        if not text:
-            return text
-
-        result = text
-        result = result.replace('&quot;',   '\u0022')
-        result = result.replace('&amp;',    '\u0026')
-        result = result.replace('&#39;',    '\u0027')
-        result = result.replace('&lt;',     '\u003C')
-        result = result.replace('&gt;',     '\u003E')
-        result = result.replace('&nbsp;',   '\u00A0')
-        result = result.replace('&laquo;',  '\u00AB')
-        result = result.replace('&raquo;',  '\u00BB')
-        result = result.replace('&ndash;',  '\u2013')
-        result = result.replace('&mdash;',  '\u2014')
-        result = result.replace('&lsquo;',  '\u2018')
-        result = result.replace('&rsquo;',  '\u2019')
-        result = result.replace('&sbquo;',  '\u201A')
-        result = result.replace('&ldquo;',  '\u201C')
-        result = result.replace('&rdquo;',  '\u201D')
-        result = result.replace('&bdquo;',  '\u201E')
-        result = result.replace('&hellip;', '\u22EF')
-
-        return re.sub('<[^<]+?>', '', result)
-
-    def get_image(self, image):
-        return image if xbmc.skinHasImage(image) else self.icon
-
-    def set_settings(self, settings):
-        for id_, val in iteritems(settings):
-            if self.get_setting(id_) != val:
-                self.set_setting(id_, val)
-
-    @classmethod
-    def kodi_major_version(cls):
-        return cls.kodi_version().split('.')[0]
-
-    @staticmethod
-    def kodi_version():
-        return xbmc.getInfoLabel('System.BuildVersion').split(' ')[0]
-
-    @staticmethod
-    def get_keyboard_text(line='', heading='', hidden=False):
-        kbd = xbmc.Keyboard(line, heading, hidden)
-        kbd.doModal()
-        if kbd.isConfirmed():
-            return kbd.getText()
-        
-        return ''  
-
-class Dialogs(object):
-
-    def notify_error(self, error, show_dialog=False):
-        if isinstance(error, WebClientError):
-            sm = simpleplugin.Addon('script.module.simplemedia')
-            sm.initialize_gettext()
-            
-            message = sm.gettext('Connection error')
-        else:
-            if isinstance(error, Exception):
-                message = error.message
-            elif isinstance(error, basestring):
-                message = error
-            else:
-                message = str(error)
-            self.log_error(message)
-    
-        if show_dialog:
-            self.dialog_ok(message)
-        else:
-            self.dialog_notification_error(message)
-
-    def dialog_notification_error(self, message):
-        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_ERROR)
-
-    def dialog_notification_info(self, message):
-        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_INFO)
-
-    def dialog_notification_warning(self, message):
-        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_WARNING)
-
-    def dialog_ok(self, line1, line2="", line3=""):
-        xbmcgui.Dialog().ok(self.name, line1, line2, line3)
   
-class Plugin(simpleplugin.Plugin, MediaProvider, Helper, SearchProvider, Dialogs):
-    pass
+class Plugin(simpleplugin.Plugin, MediaProvider, SearchProvider):
 
-class RoutedPlugin(simpleplugin.RoutedPlugin, MediaProvider, Helper, SearchProvider, Dialogs):
-    pass
+    def __init__(self, id_=''):
+        super(Plugin, self).__init__(id_)
+
+class RoutedPlugin(simpleplugin.RoutedPlugin, MediaProvider, SearchProvider):
+
+    def __init__(self, id_=''):
+        super(RoutedPlugin, self).__init__(id_)

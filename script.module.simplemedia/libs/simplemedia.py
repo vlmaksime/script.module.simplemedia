@@ -6,6 +6,7 @@ from future.utils import PY3, iteritems
 
 import re
 import os
+import json
 import requests
 from cgitb import text
 if PY3:
@@ -835,12 +836,7 @@ class Dialogs():
         if isinstance(error, WebClientError):
             message = self._sm.gettext('Connection error')
         else:
-            if isinstance(error, Exception):
-                message = error.message
-            elif isinstance(error, basestring):
-                message = error
-            else:
-                message = str(error)
+            message = '{0}'.format(error)
             self.log_error(message)
     
         if show_dialog:
@@ -875,6 +871,23 @@ class Addon(simpleplugin.Addon, Helper, Dialogs):
         for id_, val in iteritems(settings):
             if self.get_setting(id_) != val:
                 self.set_setting(id_, val)
+                
+    def send_notification(self, message, data=None):
+        params = {'sender': self.id,
+                  'message': message,
+                  }
+        
+        if data is not None:
+            params['data'] = data
+
+        command = json.dumps({'jsonrpc': '2.0',
+                              'method': 'JSONRPC.NotifyAll',
+                              'params': params,
+                              'id': 1,
+                              })
+
+        result = xbmc.executeJSONRPC(command)
+        
 
 class MediaProvider(Addon):
 
@@ -919,6 +932,15 @@ class MediaProvider(Addon):
                 duration = item['info']['video'].get('duration')
                 if duration is not None:
                     item['info']['video']['duration'] = duration / 60
+
+                mediatype = item['info']['video'].get('mediatype')
+                if mediatype in ['episode', 'season']:
+                    art = item.get('art', {})
+                    if art.get('poster') is None:
+                        if art.get('season.poster') is not None:
+                            item['art']['poster'] = art['season.poster']
+                        elif art.get('tvshow.poster') is not None:
+                            item['art']['poster'] = art['tvshow.poster']
 
         if major_version >= '16':
             art = item.get('art', {})

@@ -8,7 +8,6 @@ import re
 import os
 import json
 import requests
-from cgitb import text
 if PY3:
     import http.cookiejar as cookielib
     basestring = str
@@ -121,7 +120,8 @@ class WebClient(requests.Session):
 
     @staticmethod
     def get_response_info(response):
-        response_info = ['Response info', 'Status code: {0}'.format(response.status_code), 'Reason: {0}'.format(response.reason)]
+        response_info = ['Response info', 'Status code: {0}'.format(response.status_code),
+                         'Reason: {0}'.format(response.reason), 'Elapsed: {0:.4f} sec'.format(response.elapsed.total_seconds())]
         if response.url:
             response_info.append('URL: {0}'.format(response.url))
         if response.headers:
@@ -140,11 +140,19 @@ class WebClient(requests.Session):
         if request.headers:
             request_info.append('Headers: {0}'.format(request.headers))
         if request.body:
-            data = request.body
-            for param in data.split('&'):
-                field, value = param.split('=')
-                if field in cls._secret_data:
-                    data = data.replace(param, '{0}=<SECRET>'.format(field))
+            try:
+                j = json.loads(request.body)
+                for field in cls._secret_data:
+                    if j.get(field) is not None:
+                        j[field] = '<SECRET>'
+                data = json.dumps(j)
+            except ValueError:
+                data = request.body
+                for param in data.split('&'):
+                    if '=' in param:
+                        field, value = param.split('=')
+                        if field in cls._secret_data:
+                            data = data.replace(param, '{0}=<SECRET>'.format(field))
             request_info.append('Data: {0}'.format(data))
         
         return '\n'.join(request_info)

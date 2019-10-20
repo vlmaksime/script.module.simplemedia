@@ -2,7 +2,7 @@
 # License: GPL v.3 https://www.gnu.org/copyleft/gpl.html
 
 from __future__ import unicode_literals
-from future.utils import PY3, iteritems
+from future.utils import PY3, PY26, iteritems
 
 import re
 import os
@@ -57,71 +57,79 @@ class WebClient(requests.Session):
 
     def post(self, url, **kwargs):
 
-        try:
-            r = super(WebClient, self).post(url, **kwargs)
-            r.raise_for_status()
-        except (requests.HTTPError, requests.ConnectionError) as e:
-            self.log_error(e)
-            raise WebClientError(e)
-        else:
-            self.log_debug(r)
-            if r.headers.get('set-cookie') is not None:
-                self.__save_cookies()
-            return r
+        func = super(WebClient, self).post
+        return self._run(func, url, **kwargs)
 
     def get(self, url, **kwargs):
 
+        func = super(WebClient, self).get
+        return self._run(func, url, **kwargs)
+
+    def put(self, url, **kwargs):
+
+        func = super(WebClient, self).put
+        return self._run(func, url, **kwargs)
+
+    def delete(self, url, **kwargs):
+
+        func = super(WebClient, self).delete
+        return self._run(func, url, **kwargs)
+
+    def _run(self, func, url, **kwargs):
+
         try:
-            r = super(WebClient, self).get(url, **kwargs)
+            r = func(url, **kwargs)
             r.raise_for_status()
         except (requests.HTTPError, requests.ConnectionError) as e:
-            self.log_error(e)
+            self._log_error(e)
             raise WebClientError(e)
         else:
-            self.log_debug(r)
+            self._log_debug(r)
             if r.headers.get('set-cookie') is not None:
                 self.__save_cookies()
             return r
-
-    def log_debug(self, response):
+        
+    def _log_debug(self, response):
         debug_info = []
 
         request = getattr(response, 'request', None)
 
         if request is not None:
-            request_info = self.get_request_info(request)
+            request_info = self._get_request_info(request)
             if request:
                 debug_info.append(request_info)
             
         if response is not None:
-            response_info = self.get_response_info(response)
+            response_info = self._get_response_info(response)
             if response_info:
                 debug_info.append(response_info)
 
         self._addon.log_debug('\n'.join(debug_info)) 
 
-    def log_error(self, error):
+    def _log_error(self, error):
         error_info = [str(error)]
 
         response = getattr(error, 'response', None)
         request = getattr(error, 'request', None)
 
         if request is not None:
-            request_info = self.get_request_info(request)
+            request_info = self._get_request_info(request)
             if request:
                 error_info.append(request_info)
 
         if response is not None:
-            response_info = self.get_response_info(response)
+            response_info = self._get_response_info(response)
             if response_info:
                 error_info.append(response_info)
             
         self._addon.log_error('\n'.join(error_info)) 
 
     @staticmethod
-    def get_response_info(response):
+    def _get_response_info(response):
         response_info = ['Response info', 'Status code: {0}'.format(response.status_code),
-                         'Reason: {0}'.format(response.reason), 'Elapsed: {0:.4f} sec'.format(response.elapsed.total_seconds())]
+                         'Reason: {0}'.format(response.reason)]
+        if not PY26:
+             response_info.append('Elapsed: {0:.4f} sec'.format(response.elapsed.total_seconds()))
         if response.url:
             response_info.append('URL: {0}'.format(response.url))
         if response.headers:
@@ -132,7 +140,7 @@ class WebClient(requests.Session):
         return '\n'.join(response_info)
 
     @classmethod
-    def get_request_info(cls, request):
+    def _get_request_info(cls, request):
         request_info = ['Request info', 'Method: {0}'.format(request.method)]
 
         if request.url:

@@ -883,7 +883,40 @@ class Dialogs():
         xbmcgui.Dialog().notification(_heading, _message, icon, time, sound)
 
     def dialog_ok(self, line1, line2="", line3=""):
-        xbmcgui.Dialog().ok(self.name, line1, line2, line3)
+
+        if self.kodi_major_version() >= '19':
+            xbmcgui.Dialog().ok(self.name, self._join_strings(line1, line2, line3))
+        else:
+            xbmcgui.Dialog().ok(self.name, line1, line2, line3)
+
+    def dialog_progress_create(self, heading, line1="", line2="", line3=""):
+        progress = xbmcgui.DialogProgress()
+        
+        if self.kodi_major_version() >= '19':
+            progress.create(heading, self._join_strings(line1, line2, line3))
+        else:
+            progress.create(heading, line1, line2, line3)
+
+        return progress
+
+    def dialog_progress_update(self, progress, percent, line1="", line2="", line3=""):
+        
+        if self.kodi_major_version() >= '19':
+            progress.update(percent, self._join_strings(line1, line2, line3))
+        else:
+            progress.update(percent, line1, line2, line3)
+
+        return progress
+
+    @staticmethod
+    def _join_strings(line1, line2="", line3=""):
+
+        lines = []
+        if line1: lines.append(line1)
+        if line2: lines.append(line2)
+        if line3: lines.append(line3)
+        
+        return '[CR]'.join(lines)
 
 class Addon(simpleplugin.Addon, Helper, Dialogs):
 

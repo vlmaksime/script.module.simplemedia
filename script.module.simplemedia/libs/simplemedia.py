@@ -849,25 +849,38 @@ class Helper():
 class Dialogs():
 
     def notify_error(self, error, show_dialog=False):
+        heading = ''
+        message = '{0}'.format(error)
         if isinstance(error, WebClientError):
-            message = self._sm.gettext('Connection error')
+            heading = self._sm.gettext('Connection error')
         else:
-            message = '{0}'.format(error)
             self.log_error(message)
     
         if show_dialog:
             self.dialog_ok(message)
         else:
-            self.dialog_notification_error(message)
+            self.dialog_notification_error(heading, message)
 
-    def dialog_notification_error(self, message):
-        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_ERROR)
+    def dialog_notification_error(self, heading, message="", time=0, sound=True):
+        self.dialog_notification(heading, message, xbmcgui.NOTIFICATION_ERROR, time, sound)
 
-    def dialog_notification_info(self, message):
-        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_INFO)
+    def dialog_notification_info(self, heading, message="", time=0, sound=True):
+        self.dialog_notification(heading, message, xbmcgui.NOTIFICATION_INFO, time, sound)
 
-    def dialog_notification_warning(self, message):
-        xbmcgui.Dialog().notification(self.name, message, xbmcgui.NOTIFICATION_WARNING)
+    def dialog_notification_warning(self, heading, message="", time=0, sound=True):
+        self.dialog_notification(heading, message, xbmcgui.NOTIFICATION_WARNING, time, sound)
+
+    def dialog_notification(self, heading, message="", icon="", time=0, sound=True):
+
+        _message = message if message else heading
+
+        if heading \
+          and heading != _message:
+            _heading = '{0}: {1}'.format(self.name, heading)
+        else:
+            _heading = self.name
+
+        xbmcgui.Dialog().notification(_heading, _message, icon, time, sound)
 
     def dialog_ok(self, line1, line2="", line3=""):
         xbmcgui.Dialog().ok(self.name, line1, line2, line3)

@@ -5,9 +5,10 @@ from __future__ import unicode_literals
 
 import os
 import simplemedia
-from .simplemedia import * 
+from .simplemedia import *
 
 __all__ = simplemedia.__all__
+
 
 def where():
     return os.path.dirname(__file__)

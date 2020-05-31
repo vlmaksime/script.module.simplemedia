@@ -1,0 +1,27 @@
+language: python
+python:
+  - "3.6"
+env:
+  global:
+    - ADDON_ID=script.module.simplemedia
+    - PYTHONIOENCODING=UTF-8
+install:
+  - pip install -q -r requirements.txt
+script:
+  - coverage run tests.py
+before_deploy:
+  - pip install -q git+https://github.com/romanvm/kodi-addon-submitter.git
+  - submit-addon -s -z -m $ADDON_ID
+  - export RELEASE_ZIP=$(ls *.zip)
+deploy:
+  # Publish an installable ZIP to GitHub Releases
+  - provider: releases
+    api_key: $GH_TOKEN
+    file_glob: true
+    file: $RELEASE_ZIP
+    skip_cleanup: true
+    on:
+      python: "3.6"
+      tags: true
+notifications:
+  email: false

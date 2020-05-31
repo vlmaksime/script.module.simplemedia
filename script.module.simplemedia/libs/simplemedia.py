@@ -23,7 +23,7 @@ import simpleplugin
 from simpleplugin import SimplePluginError, py2_decode, py2_encode
 
 __all__ = ['SimplePluginError', 'Plugin', 'RoutedPlugin', 'py2_encode', 'py2_decode',
-           'GeneralInfo', 'VideoInfo', 'ListItemInfo', 'WebClient', 'WebClientError']
+           'GeneralInfo', 'VideoInfo', 'ListItemInfo', 'WebClient', 'WebClientError', 'Addon']
 
 
 class WebClientError(Exception):
@@ -177,6 +177,7 @@ class GeneralInfo(object):
         
         pass
          
+    @property
     def size(self):
         """
         long (1024) - size in bytes
@@ -186,6 +187,7 @@ class GeneralInfo(object):
         
         pass
      
+    @property
     def date(self):
         """
         string (d.m.Y / 01.01.2009) - file date
@@ -852,7 +854,8 @@ class Dialogs():
         heading = ''
         message = '{0}'.format(error)
         if isinstance(error, WebClientError):
-            heading = self._sm.gettext('Connection error')
+            _ = self.simplemedia_gettext()
+            heading = _('Connection error')
         else:
             self.log_error(message)
     
@@ -923,9 +926,6 @@ class Addon(simpleplugin.Addon, Helper, Dialogs):
     def __init__(self, id_=''):
         super(Addon, self).__init__(id_)
 
-        self._sm = simpleplugin.Addon('script.module.simplemedia')
-        self._sm.initialize_gettext()
-
     def get_image(self, image):
         return image if xbmc.skinHasImage(image) else self.icon
 
@@ -949,7 +949,12 @@ class Addon(simpleplugin.Addon, Helper, Dialogs):
                               })
 
         result = xbmc.executeJSONRPC(command)
-        
+       
+    @staticmethod 
+    def simplemedia_gettext():
+
+        addon = simpleplugin.Addon('script.module.simplemedia')
+        return addon.initialize_gettext()
 
 class MediaProvider(Addon):
 
@@ -1096,8 +1101,10 @@ class SearchProvider(Addon):
     def search_history_items(self):
     
         search_icon = self.get_image('DefaultAddonsSearch.png')
+        
+        _ = self.simplemedia_gettext()
 
-        listitem = {'label': self._sm.gettext('New Search...'),
+        listitem = {'label': _('New Search...'),
                         'url': self.url_for('search'),
                         'icon': search_icon,
                         'fanart': self.fanart,
@@ -1115,7 +1122,8 @@ class SearchProvider(Addon):
             if len(history) > history_length:
                 history[history_length - len(history):] = []
 
-            clear_item = (self._sm.gettext('Clear \'Search\''), 'RunPlugin({0})'.format(self.url_for('search_clear')))
+            _ = self.simplemedia_gettext()
+            clear_item = (_('Clear \'Search\''), 'RunPlugin({0})'.format(self.url_for('search_clear')))
 
             for index, item in enumerate(history):
                 if isinstance(item, dict):
@@ -1123,7 +1131,7 @@ class SearchProvider(Addon):
                 else:
                     keyword = item
     
-                remove_item = (self._sm.gettext('Remove from \'Search\''), 'RunPlugin({0})'.format(self.url_for('search_remove', index=index)))
+                remove_item = (_('Remove from \'Search\''), 'RunPlugin({0})'.format(self.url_for('search_remove', index=index)))
 
                 listitem = {'label': keyword,
                             'url': self.url_for('search', keyword=keyword),
@@ -1173,7 +1181,9 @@ class SearchProvider(Addon):
 
             storage['history'] = history
 
-        self.dialog_notification_info(self._sm.gettext('Successfully removed from \'Search\''))
+        _ = self.simplemedia_gettext()
+
+        self.dialog_notification_info(_('Successfully removed from \'Search\''))
         xbmc.executebuiltin('Container.Refresh()')
 
     def search_history_clear(self):
@@ -1181,7 +1191,9 @@ class SearchProvider(Addon):
         with self.get_storage('__history__.pcl') as storage:
             storage['history'] = []
 
-        self.dialog_notification_info(self._sm.gettext('\'Search\' successfully cleared'))
+        _ = self.simplemedia_gettext()
+
+        self.dialog_notification_info(_('\'Search\' successfully cleared'))
         xbmc.executebuiltin('Container.Refresh()')
   
 class Plugin(simpleplugin.Plugin, MediaProvider, SearchProvider):

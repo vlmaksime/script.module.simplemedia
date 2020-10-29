@@ -134,7 +134,9 @@ class WebClient(requests.Session):
             response_info.append('URL: {0}'.format(response.url))
         if response.headers:
             response_info.append('Headers: {0}'.format(response.headers))
-        if response.text:
+        
+        if response.text \
+          and response.encoding:
             response_info.append('Content: {0}'.format(response.text))
 
         return '\n'.join(response_info)

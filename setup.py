@@ -18,11 +18,12 @@ def get_version():
         return re.search(r'(?<!xml )version="(.+?)"', addon_xml.read()).group(1)
 
 
+shutil.copytree(os.path.join(addon_dir, 'libs', 'simplemedia'),
+                os.path.join(this_dir, 'simplemedia'))
+
 language_dir = os.path.join('resources', 'language', 'English')
 os.makedirs(os.path.join(this_dir, 'simplemedia', language_dir))
 
-shutil.copy(os.path.join(addon_dir, 'libs', 'simplemedia.py'),
-            os.path.join(this_dir, 'simplemedia'))
 shutil.copy(os.path.join(addon_dir, 'addon.xml'),
             os.path.join(this_dir, 'simplemedia'))
 shutil.copy(os.path.join(addon_dir, language_dir, 'strings.po'),
@@ -42,6 +43,4 @@ try:
           zip_safe=False,
           )
 finally:
-    os.remove(os.path.join(this_dir, 'simplemedia', 'simplemedia.py'))
-    os.remove(os.path.join(this_dir, 'simplemedia', 'addon.xml'))
-    shutil.rmtree(os.path.join(this_dir, 'simplemedia', 'resources'))
+    shutil.rmtree(os.path.join(this_dir, 'simplemedia'))

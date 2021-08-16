@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 import xbmcgui
 
 from .webclient import WebClientError
+from simpleplugin import py2_decode
 
 __all__ = ['Dialogs']
 
@@ -39,11 +40,13 @@ class Dialogs(object):
 
         _message = message if message else heading
 
+        addon_name = py2_decode(self.name)
+        
         if heading \
                 and heading != _message:
-            _heading = '{0}: {1}'.format(self.name, heading)
+            _heading = '{0}: {1}'.format(addon_name, heading)
         else:
-            _heading = self.name
+            _heading = py2_decode(addon_name)
 
         xbmcgui.Dialog().notification(_heading, _message, icon, time, sound)
 

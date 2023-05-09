@@ -128,7 +128,10 @@ class MediaProvider(Addon):
                 list_item.addStreamInfo(stream, stream_info)
         if item.get('info'):
             for media, info in iteritems(item['info']):
-                list_item.setInfo(media, info)
+                if major_version >= '20':
+                    self.set_info_tag(list_item, media, info)
+                else:
+                    list_item.setInfo(media, info)
         if item.get('context_menu') is not None:
             list_item.addContextMenuItems(item['context_menu'])
         if item.get('subtitles'):
@@ -194,6 +197,143 @@ class MediaProvider(Addon):
     def resolve_url(self, item, succeeded=True):
         list_item = self.create_list_item(item)
         xbmcplugin.setResolvedUrl(self._handle, succeeded, list_item)
+
+    def set_info_tag(self, list_item, media, info):
+
+        if media == 'video':
+            self.set_video_info_tag(list_item, info)
+        else:
+            raise TypeError(
+                'unsupported media type "{0}"!'.format(media))
+
+    @staticmethod
+    def set_video_info_tag(list_item, info):
+
+        videoInfoTag = list_item.getVideoInfoTag()
+        for tag, value in iteritems(info):
+            if value is None \
+                    or tag in ['date']:
+                continue
+            elif tag == 'dbid':
+                videoInfoTag.setDbId(value)
+            elif tag == 'year':
+                videoInfoTag.setYear(value)
+            elif tag == 'episode':
+                videoInfoTag.setEpisode(value)
+            elif tag == 'season':
+                videoInfoTag.setSeason(value)
+            elif tag == 'sortepisode':
+                videoInfoTag.setSortEpisode(value)
+            elif tag == 'sortseason':
+                videoInfoTag.setSortSeason(value)
+            elif tag == 'episodeguide':
+                videoInfoTag.setEpisodeGuide(value)
+            elif tag == 'top250':
+                videoInfoTag.setTop250(value)
+            elif tag == 'setid':
+                videoInfoTag.setSetId(value)
+            elif tag == 'tracknumber':
+                videoInfoTag.setTrackNumber(value)
+            elif tag == 'rating':
+                videoInfoTag.setRating(value)
+            elif tag == 'ratings':
+                ratings = []
+                defaultrating = ''
+                for item in value:
+                    ratings[item['type']] = (item.get('rating', 0), item.get('votes', 0))
+                    if item['defaultt']:
+                        defaultrating = rating_item['type']
+                videoInfoTag.setRatings(ratings, defaultrating)
+
+            elif tag == 'userrating':
+                videoInfoTag.setUserRating(value)
+            elif tag == 'playcount':
+                videoInfoTag.setPlaycount(value)
+            elif tag == 'mpaa':
+                videoInfoTag.setMpaa(value)
+            elif tag == 'plot':
+                videoInfoTag.setPlot(value)
+            elif tag == 'plotoutline':
+                videoInfoTag.setPlotOutline(value)
+            elif tag == 'title':
+                videoInfoTag.setTitle(value)
+            elif tag == 'originaltitle':
+                videoInfoTag.setOriginalTitle(value)
+            elif tag == 'sorttitle':
+                videoInfoTag.setSortTitle(value)
+            elif tag == 'tagline':
+                videoInfoTag.setTagLine(value)
+            elif tag == 'tvshowtitle':
+                videoInfoTag.setTvShowTitle(value)
+            elif tag == 'status':
+                videoInfoTag.setTvShowStatus(value)
+            elif tag == 'genre':
+                videoInfoTag.setGenres(value)
+            elif tag == 'country':
+                videoInfoTag.setCountries(value)
+            elif tag == 'director':
+                videoInfoTag.setDirectors(value)
+            elif tag == 'studio':
+                videoInfoTag.setStudios(value)
+            elif tag == 'writer':
+                videoInfoTag.setWriters(value)
+            elif tag == 'duration':
+                if isinstance(value, float):
+                    value = int(value)
+                videoInfoTag.setDuration(value)
+            elif tag == 'premiered':
+                videoInfoTag.setPremiered(value)
+            elif tag == 'set':
+                videoInfoTag.setSet(value)
+            elif tag == 'setoverview':
+                videoInfoTag.setSetOverview(value)
+            elif tag == 'tag':
+                videoInfoTag.setTags(value)
+            elif tag == 'code':
+                videoInfoTag.setProductionCode(value)
+            elif tag == 'aired':
+                videoInfoTag.setFirstAired(value)
+            elif tag == 'lastplayed':
+                videoInfoTag.setLastPlayed(value)
+            elif tag == 'album':
+                videoInfoTag.setAlbum(value)
+            elif tag == 'votes':
+                videoInfoTag.setVotes(value)
+            elif tag == 'trailer':
+                videoInfoTag.setTrailer(value)
+            elif tag == 'path':
+                videoInfoTag.setPath(value)
+            elif tag == 'filenameandpath':
+                videoInfoTag.setFilenameAndPath(value)
+            elif tag == 'imdbnumber':
+                videoInfoTag.setIMDBNumber(value)
+            elif tag == 'dateadded':
+                videoInfoTag.setDateAdded(value)
+            elif tag == 'mediatype':
+                videoInfoTag.setMediaType(value)
+            elif tag == 'showlink':
+                videoInfoTag.setShowLinks(value)
+            elif tag == 'artist':
+                videoInfoTag.setArtists(value)
+            elif tag == 'cast':
+                cast = []
+                for actor in value:
+                    actor_name = ''
+                    actor_role = ''
+                    actor_order = 0
+                    actor_thumbnail = ''
+                    if isinstance(actor, dict):
+                        actor_name = actor.get('name', '')
+                        actor_role = actor.get('role', '')
+                        actor_order = actor.get('order', 0)
+                        actor_thumbnail = actor.get('thumbnail', '')
+                    else:
+                        actor_name = actor
+                    cast.append(xbmc.Actor(actor_name, actor_role, actor_order, actor_thumbnail))
+                videoInfoTag.setCast(cast)
+            else:
+                raise TypeError(
+                    'unsupported info tag "{0}" with value "{1}"!'.format(tag, value))
 
 
 class SearchProvider(Addon):
